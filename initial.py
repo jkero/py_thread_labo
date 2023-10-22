@@ -49,8 +49,9 @@ class MonThread (threading.Thread) :
 
     def run (self) :
         for i in range (0, 10) :
-            print("thread ", i)
-            time.sleep (0.1)
+            n = random.randint (0,5)
+            print("thread %d delai %d" % (i, n))
+            time.sleep (n)
 
           # afin que le thread retourne un résultat
           # self.res désigne thread_resultat qui reçoit un nombre de plus
@@ -65,9 +66,12 @@ class MonThread (threading.Thread) :
         self.win.event_generate ("<<thread_fini>>", x = h)
 
 thread_resultat = []
+tic = 0
+toc = 0
 
 def lance_thread () :
     global thread_resultat
+    global tic
       # fonction appelée lors de la pression du bouton
       # on change la légnde de la zone de texte
     text .config (text = "thread démarré")
@@ -76,17 +80,25 @@ def lance_thread () :
     bouton.config (state = TK.DISABLED)
       # on lance le thread
     m = MonThread (root, thread_resultat)
+    tic = time.perf_counter()
+    print(tic)
     m.start ()
+
 
 def thread_fini_fonction (e) :
     global thread_resultat
-      # fonction appelée lorsque le thread est fini
+    global toc
+    # fonction appelée lorsque le thread est fini
     print("la fenêtre sait que le thread est fini")
       # on change la légende de la zone de texte
+    toc = time.perf_counter()
+    print(toc)
+    print(toc - tic)
     text .config (text = "thread fini + résultat " + str (thread_resultat))
-    text2.config (text = "thread fini + résultat (e.x) " + str (e.x))
+    text2.config (text = "t. exéc. = %s" % str (round(toc - tic,4)))
       # on réactive le bouton de façon à pouvoir lancer un autre thread
     bouton.config (state = TK.NORMAL)
+
 
 import tkinter as TK
 
