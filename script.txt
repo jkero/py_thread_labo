@@ -1,0 +1,60 @@
+spec1 = deque()
+spec2 = deque()
+normal = deque()
+while liste_cas:
+	i_cas = liste_cas.pop()
+	if i_cas.prio == True:
+		if i_cas.type == 'spec1':
+			spec1.append(i_cas)
+		if i_cas.type == 'spec2':
+			spec2.append(i_cas)
+		if i_cas.type == 'normal':
+			normal.append(i_cas)
+	else:
+		liste_cas.add(i_cas)
+		continue
+		
+	if i_cas.prio == False:
+		if i_cas.type == 'spec1':
+			spec1.append(i_cas)
+		if i_cas.type == 'spec2':
+			spec2.append(i_cas)
+		if i_cas.type == 'normal':
+			normal.append(i_cas)
+			
+for i in spec1:
+	print(str(i.prio) + " " + i.type)
+print("-- fin spec1")
+for i in spec2:
+	print(str(i.prio) + " " + i.type)			
+print("-- fin spec2")
+for i in normal:
+	print(str(i.prio) + " " + i.type)
+print("-- fin normal")
+
+-------------------------------------
+spec1 = deque()
+spec2 = deque()
+normal = deque()
+les_false = list()
+for i_cas in liste_cas:
+	if i_cas.prio == False:
+		les_falses.add(liste_cas.pop(i_cas))
+	if i_cas.prio == True:
+		if i_cas.type == 'spec1':
+			spec1.append(i_cas)
+		if i_cas.type == 'spec2':
+			spec2.append(i_cas)
+		if i_cas.type == 'normal':
+			normal.append(i_cas)
+	else:
+		liste_cas.add(i_cas)
+		continue
+		
+	if i_cas.prio == False:
+		if i_cas.type == 'spec1':
+			spec1.append(i_cas)
+		if i_cas.type == 'spec2':
+			spec2.append(i_cas)
+		if i_cas.type == 'normal':
+			normal.append(i_cas)

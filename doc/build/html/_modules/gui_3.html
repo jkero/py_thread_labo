@@ -1,0 +1,555 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>gui_3 &#8212; Guichet 1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/momo.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for gui_3</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Thu Feb  6 12:38:11 2020</span>
+
+<span class="sd">D&#39;après http://www.xavierdupre.fr/app/teachpyx/helpsphinx/c_parallelisation/thread.html</span>
+
+<span class="sd">@author: jk</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">tkinter</span> <span class="k">as</span> <span class="nn">TK</span>
+<span class="kn">import</span> <span class="nn">threading</span><span class="o">,</span> <span class="nn">time</span><span class="o">,</span> <span class="nn">random</span><span class="o">,</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="k">import</span> <span class="n">choices</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">deque</span>
+
+<span class="n">NUMGUICHETS</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">threadLock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+<span class="n">prio</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+<span class="c1"># un dictionnaire pour les types et billets</span>
+<span class="n">prefixes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="s1">&#39;B&#39;</span><span class="p">,</span><span class="s1">&#39;C&#39;</span><span class="p">,</span><span class="s1">&#39;D&#39;</span><span class="p">,</span><span class="s1">&#39;E&#39;</span><span class="p">,</span><span class="s1">&#39;F&#39;</span><span class="p">,</span><span class="s1">&#39;G&#39;</span><span class="p">,</span><span class="s1">&#39;H&#39;</span><span class="p">,</span><span class="s1">&#39;J&#39;</span><span class="p">,</span><span class="s1">&#39;K&#39;</span><span class="p">,</span><span class="s1">&#39;Z&#39;</span><span class="p">]</span>
+<span class="n">dico</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;spec1&#39;</span><span class="p">:[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="s1">&#39;B&#39;</span><span class="p">,</span><span class="s1">&#39;C&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;spec2&#39;</span><span class="p">:[</span><span class="s1">&#39;D&#39;</span><span class="p">,</span><span class="s1">&#39;E&#39;</span><span class="p">,</span><span class="s1">&#39;F&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;normal&#39;</span><span class="p">:[</span><span class="s1">&#39;G&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span><span class="s1">&#39;J&#39;</span><span class="p">,</span><span class="s1">&#39;K&#39;</span><span class="p">,</span><span class="s1">&#39;Z&#39;</span><span class="p">]}</span>
+
+<span class="c1">#autre moyen de classer les cas à la saisie</span>
+
+<span class="n">dico2</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;prio&#39;</span><span class="p">:[</span><span class="s1">&#39;spec1&#39;</span><span class="p">,</span><span class="s1">&#39;spec2&#39;</span><span class="p">,</span><span class="s1">&#39;normal&#39;</span><span class="p">],</span>
+         <span class="s1">&#39;base&#39;</span><span class="p">:[</span><span class="s1">&#39;spec1&#39;</span><span class="p">,</span><span class="s1">&#39;spec2&#39;</span><span class="p">,</span><span class="s1">&#39;normal&#39;</span><span class="p">]</span>
+    <span class="p">}</span>
+
+<span class="n">competences</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;prio&#39;</span><span class="p">,</span> <span class="s1">&#39;spec1&#39;</span><span class="p">,</span> <span class="s1">&#39;spec2&#39;</span><span class="p">,</span> <span class="s1">&#39;normal&#39;</span><span class="p">]</span>
+
+<span class="n">thread_resultat</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">liste_cas</span> <span class="o">=</span> <span class="p">[[[],</span> <span class="p">[],</span> <span class="p">[]],</span> <span class="p">[[],</span> <span class="p">[],</span> <span class="p">[]]]</span>
+<span class="sd">&#39;&#39;&#39;format de cette liste basé sur prio et types #rangee 0 = prio, rangee 1 = base</span>
+<span class="sd">    [0][0].append -&gt; tous les prioritaires de type spec1</span>
+<span class="sd">    [0][1].append -&gt; tous les prioritaires de type spec2</span>
+<span class="sd">    [0][3].append -&gt; tous les prioritaires de type normal</span>
+<span class="sd">    [1]][0].append -&gt; tous les base de type spec1</span>
+<span class="sd">    [1][1].append -&gt; tous les base de type spec2</span>
+<span class="sd">    [1][3].append -&gt; tous les base de type normal   </span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="n">liste_guichets</span> <span class="o">=</span> <span class="p">[]</span><span class="c1">#liste des objets guichets travailler avec index - num guichet</span>
+<span class="n">liste_thread</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1">#contient les thread guichet pour controler</span>
+
+<span class="n">suivi_ticket</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">prefixes</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Cas"><a class="viewcode-back" href="../other.html#gui_3.Cas">[docs]</a><span class="k">class</span> <span class="nc">Cas</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Contient les objetcs cas passés par le gardien (et insérés par le système)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">prio</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span> <span class="c1">#type= spec1, spec2 .. ou normal; prio = true or false</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prio</span> <span class="o">=</span> <span class="n">prio</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">date_creation</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">date_reclass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">date_creation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debut_traitm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">date_creation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fin_traitm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">date_creation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ticket_num</span> <span class="o">=</span> <span class="n">t</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">traite</span> <span class="o">=</span> <span class="kc">False</span>
+        
+<div class="viewcode-block" id="Cas.en_string"><a class="viewcode-back" href="../other.html#gui_3.Cas.en_string">[docs]</a>    <span class="k">def</span> <span class="nf">en_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        READABLE FORMAT</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;type : &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;prio : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prio</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;ticket : &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticket_num</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;cree le : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">date_creation</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;reclass le : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">date_reclass</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;debut_tr : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debut_traitm</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;fin_tr : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fin_traitm</span><span class="p">))</span></div></div>
+        
+<div class="viewcode-block" id="Guichet"><a class="viewcode-back" href="../other.html#gui_3.Guichet">[docs]</a><span class="k">class</span> <span class="nc">Guichet</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num</span> <span class="o">=</span> <span class="n">num</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">competences</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">genere_competences</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ouverture</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">historique</span> <span class="o">=</span> <span class="p">[]</span><span class="c1">#liste de cas traités</span>
+        
+        
+<div class="viewcode-block" id="Guichet.historique"><a class="viewcode-back" href="../other.html#gui_3.Guichet.historique">[docs]</a>    <span class="k">def</span> <span class="nf">historique</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;cas traités : </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">cas</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">historique</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> type : &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;prio : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prio</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;ticket : &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticket_num</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;cree le : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">date_creation</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;reclass le : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">date_reclass</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;debut_tr : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debut_traitm</span><span class="p">)</span> <span class="o">+</span>
+        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;fin_tr : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fin_traitm</span><span class="p">))</span></div>
+        
+    <span class="k">def</span> <span class="nf">genere_competences</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#creer random n competences pour ce guichet</span>
+        <span class="n">a</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">choices</span><span class="p">([</span><span class="n">competences</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s1">&#39;&#39;</span><span class="p">],</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">choices</span><span class="p">(</span><span class="n">competences</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:],</span><span class="n">k</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">a</span><span class="p">)</span></div>
+        
+        
+<span class="c1"># définition du thread</span>
+<span class="c1"># class MonThread (threading.Thread) :</span>
+<span class="c1">#     def __init__ (self, win, res) :</span>
+<span class="c1">#         threading.Thread.__init__ (self)</span>
+<span class="c1">#         self.win = win  </span>
+<span class="c1">#         self.res = res</span>
+
+<span class="c1">#     def run (self) :</span>
+<span class="c1">#         ajoute_cas()    </span>
+<span class="c1">#         self.win.event_generate (&quot;&lt;&lt;thread_fini&gt;&gt;&quot;, x = h)</span>
+
+<span class="k">class</span> <span class="nc">ThreadAjouteCas</span> <span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">)</span> <span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="p">,</span><span class="n">res</span><span class="p">)</span> <span class="p">:</span>
+        <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="o">.</span><span class="fm">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>  
+
+
+    <span class="k">def</span> <span class="nf">run</span> <span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="p">:</span>
+        <span class="n">cpt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span> <span class="p">:</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span> <span class="p">(</span><span class="n">h</span><span class="p">)</span>
+            <span class="n">threadLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+            <span class="n">ajoute_cas</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot; --------------- cas &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; delai &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
+            <span class="n">threadLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="n">cpt</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="o">.</span><span class="n">event_generate</span> <span class="p">(</span><span class="s2">&quot;&lt;&lt;thread_fini&gt;&gt;&quot;</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">i</span><span class="p">)</span>
+        
+<span class="k">class</span> <span class="nc">ThreadGuichetOuvert</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">)</span> <span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="p">,</span> <span class="n">guichet</span><span class="p">,</span> <span class="n">texte</span><span class="p">)</span> <span class="p">:</span>
+        <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="o">.</span><span class="fm">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">guichet</span> <span class="o">=</span> <span class="n">guichet</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">texte</span>
+
+    <span class="k">def</span> <span class="nf">run</span> <span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">9</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span> <span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="n">check</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">run</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">compte_cas</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">check</span> <span class="o">&lt;=</span> <span class="n">run</span><span class="p">:</span>
+            <span class="n">threadLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+            <span class="n">pige_prochain_cas</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">guichet</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot; --------------- guichet &quot;</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; lancé ...&quot;</span><span class="p">)</span>
+            <span class="n">run</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compte_cas</span><span class="p">()</span>
+            <span class="n">check</span><span class="o">+=</span><span class="mi">1</span>
+            <span class="n">threadLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot; --------------- guichet &quot;</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; fermé ...&quot;</span><span class="p">)</span>     
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot; --------------- guichet &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; fermé ...&quot;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">stats</span><span class="p">()</span>
+        <span class="n">text3</span><span class="o">.</span><span class="n">config</span><span class="p">(</span> <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">stop_me</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot; --------------- guichet &quot;</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; fermé ...&quot;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">compte_cas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span>\
+            <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>\
+            <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span> <span class="o">+</span>\
+            <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span>\
+            <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>\
+            <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>                    
+        <span class="k">return</span> <span class="n">c</span>
+
+
+<span class="k">def</span> <span class="nf">lance_thread</span> <span class="p">()</span> <span class="p">:</span>
+    <span class="n">text</span> <span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;Tx1 thread démarré&quot;</span><span class="p">)</span>
+    <span class="n">text2</span><span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;Tx2 thread démarré&quot;</span><span class="p">)</span>
+    <span class="n">bouton</span><span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">state</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">DISABLED</span><span class="p">)</span>
+<span class="c1"># on lance le thread</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">ThreadAjouteCas</span><span class="p">(</span><span class="n">root</span><span class="p">,</span><span class="n">thread_resultat</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">start</span> <span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">thread_fini_fonction</span> <span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;la fenêtre sait que le thread est fini&quot;</span><span class="p">)</span>
+<span class="c1"># on change la légende de la zone de texte</span>
+    <span class="n">text</span> <span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;thread fini + résultat &quot;</span> <span class="o">+</span> <span class="nb">str</span> <span class="p">(</span><span class="n">thread_resultat</span><span class="p">))</span>
+    <span class="n">text2</span><span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;thread fini + résultat (e.x) &quot;</span> <span class="o">+</span> <span class="nb">str</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+<span class="c1"># on réactive le bouton de façon à pouvoir lancer un autre thread</span>
+    <span class="n">bouton</span><span class="o">.</span><span class="n">config</span> <span class="p">(</span><span class="n">state</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="p">())</span>
+
+<span class="k">def</span> <span class="nf">cas_aleat</span> <span class="p">():</span>
+    <span class="n">le_type</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">dico</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="n">la_prio</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">prio</span><span class="p">)</span>
+    <span class="c1">#//TODO genere ticket sequentiel</span>
+    <span class="n">le_num_ticket</span> <span class="o">=</span> <span class="n">seq_ticket</span><span class="p">(</span><span class="n">le_type</span><span class="p">)</span>
+    <span class="n">cas</span> <span class="o">=</span> <span class="n">Cas</span><span class="p">(</span><span class="n">le_type</span><span class="p">,</span> <span class="n">la_prio</span><span class="p">,</span> <span class="n">le_num_ticket</span><span class="p">)</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">cas</span><span class="o">.</span><span class="n">en_string</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">cas</span>
+                  
+<span class="k">def</span> <span class="nf">ajoute_cas</span> <span class="p">():</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">cas_aleat</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">prio</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;spec1&#39;</span><span class="p">:</span>
+            <span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;spec2&#39;</span><span class="p">:</span>
+            <span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;normal&#39;</span><span class="p">:</span>
+            <span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;spec1&#39;</span><span class="p">:</span>
+            <span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;spec2&#39;</span><span class="p">:</span>
+            <span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;normal&#39;</span><span class="p">:</span>
+            <span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+    
+    <span class="n">s</span> <span class="o">=</span> <span class="n">stats</span><span class="p">()</span>
+    <span class="n">text3</span><span class="o">.</span><span class="n">config</span><span class="p">(</span> <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="p">)</span>
+<span class="c1">#TODO: apres avoir généré le type de cas, il faut le classe dans une des listes sp1 sp2 ou normal</span>
+<span class="c1"># ensuite : appeler manager pour trier les 3 listes en 1 seule.</span>
+<span class="c1">#un guichet examine la liste: si self</span>
+
+
+<span class="k">def</span> <span class="nf">stats</span><span class="p">():</span>
+    <span class="n">text2</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;liste contient &quot;</span> <span class="o">+</span>
+                 <span class="nb">str</span><span class="p">((</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> 
+                     <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span> <span class="o">+</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> 
+                     <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+                     <span class="p">)))</span>
+    <span class="n">statis</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ps1&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;ps2&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;pn&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;s1&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;s2&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;n&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;ps1&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;ps2&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;pn&#39;</span><span class="p">]</span> <span class="o">+=</span>  <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;s1&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;s2&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">statis</span>   
+
+<span class="k">def</span> <span class="nf">stats_histo</span><span class="p">():</span>
+    <span class="n">statis</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ps1&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;ps2&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;pn&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;s1&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;s2&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;n&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;ps1&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;ps2&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;pn&#39;</span><span class="p">]</span> <span class="o">+=</span>  <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;s1&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;s2&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">statis</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="n">statis</span><span class="p">)</span>   
+
+    <span class="k">for</span> <span class="n">guichet</span> <span class="ow">in</span> <span class="n">liste_guichets</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (&quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">guichet</span><span class="o">.</span><span class="n">competences</span><span class="p">)</span>  <span class="o">+</span> <span class="s2">&quot;)&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cas_histo</span> <span class="ow">in</span> <span class="n">guichet</span><span class="o">.</span><span class="n">historique</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">cas_histo</span><span class="o">.</span><span class="n">ticket_num</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cas_histo</span><span class="o">.</span><span class="n">prio</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">cas_histo</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+                
+<span class="k">def</span> <span class="nf">seq_ticket</span><span class="p">(</span><span class="n">le_type</span><span class="p">):</span>
+    <span class="n">prefixe</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">dico</span><span class="p">[</span><span class="n">le_type</span><span class="p">]))</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="n">suivi_ticket</span><span class="p">[</span><span class="n">prefixe</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">le_num</span> <span class="o">=</span> <span class="n">prefixe</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
+    <span class="n">suivi_ticket</span><span class="p">[</span><span class="n">prefixe</span><span class="p">]</span> <span class="o">=</span> <span class="n">num</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">suivi_ticket</span><span class="p">)</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">le_num</span><span class="p">)</span>
+
+    
+<span class="k">def</span> <span class="nf">pick</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="n">guichet</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">liste_guichets</span><span class="p">:</span> <span class="c1">#affecter un guichet specifique</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">num</span> <span class="o">==</span> <span class="n">n</span><span class="p">:</span>
+            <span class="n">guichet</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="n">th</span> <span class="o">=</span> <span class="n">ThreadGuichetOuvert</span><span class="p">(</span><span class="n">root</span><span class="p">,</span><span class="n">guichet</span><span class="p">,</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; ouvert&quot;</span><span class="p">)</span>
+    <span class="n">th</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>              
+    <span class="c1">#passer object guichet à thread_guichet</span>
+    
+    
+<span class="k">def</span> <span class="nf">pige_prochain_cas</span><span class="p">(</span><span class="n">obj_guichet</span><span class="p">):</span><span class="c1">#il faut la cote &#39;prio&#39; pour traiter des cas prio (mais pas exclusivement les prio) -- if 2e ligne</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (&quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">competences</span><span class="p">)</span> <span class="o">+</span><span class="s2">&quot;) pige dans la liste&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;prio&#39;</span> <span class="ow">in</span> <span class="n">obj_guichet</span><span class="o">.</span><span class="n">competences</span> <span class="ow">and</span> <span class="n">traite_cas</span><span class="p">(</span><span class="n">obj_guichet</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="s2">&quot;prio&quot;</span><span class="p">))</span> <span class="ow">or</span> <span class="n">traite_cas</span><span class="p">(</span><span class="n">obj_guichet</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;base&quot;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; a trouvé un cas&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; n&#39;a rien trouvé&quot;</span><span class="p">)</span>
+    
+
+<span class="k">def</span> <span class="nf">traite_cas</span><span class="p">(</span><span class="n">obj_guichet</span><span class="p">,</span> <span class="n">cpt_type</span><span class="p">,</span> <span class="n">passe</span><span class="p">):</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  **** cherche cas &quot;</span> <span class="o">+</span> <span class="n">passe</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">groupe_type</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="n">cpt_type</span><span class="p">])):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     groupe &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">groupe_type</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">liste_cas</span><span class="p">[</span><span class="n">cpt_type</span><span class="p">][</span><span class="n">groupe_type</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1">#il y a des prio</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;         **** explore types&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">cas</span> <span class="ow">in</span> <span class="n">liste_cas</span><span class="p">[</span><span class="n">cpt_type</span><span class="p">][</span><span class="n">groupe_type</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">cas</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">cas</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="n">obj_guichet</span><span class="o">.</span><span class="n">competences</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;       **** trouve un cas de sa competence&quot;</span><span class="p">)</span>
+                    <span class="n">affiche_t</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;        ! ! G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; traite &quot;</span> <span class="o">+</span> <span class="n">cas</span><span class="o">.</span><span class="n">ticket_num</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        ! ! G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; traite &quot;</span> <span class="o">+</span> <span class="n">cas</span><span class="o">.</span><span class="n">ticket_num</span><span class="p">)</span>
+                    <span class="n">cas</span><span class="o">.</span><span class="n">debut_traitm</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="n">cas</span><span class="o">.</span><span class="n">traite</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">obj_guichet</span><span class="o">.</span><span class="n">historique</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cas</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="p">())</span>
+                    <span class="n">liste_cas</span><span class="p">[</span><span class="n">cpt_type</span><span class="p">][</span><span class="n">groupe_type</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">cas</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="p">())</span>
+                    <span class="n">done</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span><span class="p">;</span>
+            <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot; **** G&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; ne trouve rien dans &quot;</span> <span class="o">+</span> <span class="n">passe</span> <span class="o">+</span> <span class="s2">&quot; ou est incompétent :&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">obj_guichet</span><span class="o">.</span><span class="n">competences</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">done</span>                
+             
+    
+<span class="k">def</span> <span class="nf">ajoute_guichets</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">NUMGUICHETS</span> <span class="o">+</span><span class="mi">1</span><span class="p">):</span>         
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Guichet</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;cree guichet&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">competences</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span><span class="p">)</span> 
+        <span class="n">liste_guichets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">contient</span><span class="p">(</span><span class="n">la_liste</span><span class="p">,</span> <span class="n">le_nom</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">la_liste</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">le_nom</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">break</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">res</span>
+<span class="c1"># on crée la fenêtre</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">root</span>   <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Tk</span> <span class="p">()</span>
+    <span class="n">bouton</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Button</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;thread départ&quot;</span><span class="p">,</span> <span class="n">command</span> <span class="o">=</span> <span class="n">lance_thread</span><span class="p">)</span>
+    <span class="n">text</span>   <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;rien&quot;</span><span class="p">)</span>
+    <span class="n">text2</span>  <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;rien&quot;</span><span class="p">)</span>
+    <span class="n">text3</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;resultats&#39;</span><span class="p">)</span>
+    <span class="n">bouton2</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Button</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;Ajouter un cas&quot;</span><span class="p">,</span> <span class="n">command</span> <span class="o">=</span> <span class="n">ajoute_cas</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="p">(</span><span class="n">bouton2</span><span class="o">.</span><span class="n">nametowidget</span><span class="p">(</span><span class="n">bouton2</span><span class="p">))</span>
+    <span class="n">bouton</span><span class="o">.</span><span class="n">pack</span> <span class="p">()</span>
+    <span class="n">bouton2</span><span class="o">.</span><span class="n">pack</span> <span class="p">()</span>
+    <span class="n">text</span><span class="o">.</span><span class="n">pack</span> <span class="p">()</span>
+    <span class="n">text2</span><span class="o">.</span><span class="n">pack</span> <span class="p">()</span>
+    <span class="n">text3</span><span class="o">.</span><span class="n">pack</span> <span class="p">()</span>
+    
+    <span class="c1">#TOTO comment automatiserceci? Noms des objets sont inaccessibles -&gt; mettre dans parent frame?</span>
+    <span class="c1">#NUMGUICHETS = 4 final?</span>
+    <span class="n">g1</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;G1&quot;</span><span class="p">,</span> <span class="n">command</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">pick</span><span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g1_t</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    
+    
+    
+    <span class="n">g1</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span> 
+    <span class="n">g1_t</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;fermé&quot;</span><span class="p">)</span>
+    <span class="n">g1_t</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span>
+    
+    <span class="n">g2</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;G2&quot;</span><span class="p">,</span> <span class="n">command</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span>  <span class="n">pick</span><span class="p">(</span><span class="n">g2</span><span class="p">,</span> <span class="n">g2_t</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">g2</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span> 
+    <span class="n">g2_t</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;fermé&quot;</span><span class="p">)</span>
+    <span class="n">g2_t</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span>
+    
+    <span class="n">g3</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;G3&quot;</span><span class="p">,</span> <span class="n">command</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span>  <span class="n">pick</span><span class="p">(</span><span class="n">g3</span><span class="p">,</span> <span class="n">g3_t</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">g3</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span> 
+    <span class="n">g3_t</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;fermé&quot;</span><span class="p">)</span>
+    <span class="n">g3_t</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span>
+    
+    <span class="n">g4</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;G4&quot;</span><span class="p">,</span> <span class="n">command</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span>  <span class="n">pick</span><span class="p">(</span><span class="n">g4</span><span class="p">,</span> <span class="n">g4_t</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">g4</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span> 
+    <span class="n">g4_t</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;fermé&quot;</span><span class="p">)</span>
+    <span class="n">g4_t</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span>
+    
+    <span class="n">affiche_t</span> <span class="o">=</span> <span class="n">TK</span><span class="o">.</span><span class="n">Label</span> <span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;aucun cas en traitement&quot;</span><span class="p">)</span>
+    <span class="n">affiche_t</span><span class="o">.</span><span class="n">pack</span><span class="p">()</span>
+    
+    
+    <span class="n">ajoute_guichets</span><span class="p">()</span>
+    
+    <span class="c1">#TODO classe guicher avec prop compétences</span>
+    <span class="c1"># trouver moyen de référencer objets dynamiques (v et t dans loop??)    </span>
+    
+    <span class="c1"># on associe une fonction à un événement &lt;&lt;thread_fini&gt;&gt; propre au programme</span>
+    <span class="n">root</span><span class="o">.</span><span class="n">bind</span> <span class="p">(</span><span class="s2">&quot;&lt;&lt;thread_fini&gt;&gt;&quot;</span><span class="p">,</span> <span class="n">thread_fini_fonction</span><span class="p">)</span>
+    
+    <span class="c1"># on active la boucle principale de message</span>
+    <span class="n">root</span><span class="o">.</span><span class="n">mainloop</span> <span class="p">()</span>
+
+
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Me créer un classe &quot;cas&quot; et une structure pour contenir des cas.</span>
+
+<span class="sd">class Cas:</span>
+<span class="sd">    def __init__(self, type, prio): #type= spec1, spec2 .. ou normal; prio = true or false</span>
+<span class="sd">        self.type = type</span>
+<span class="sd">        self.prio = prio</span>
+<span class="sd">        self.date_creation = date.now()</span>
+<span class="sd">        self.date_reclass = date_creation</span>
+<span class="sd">        self.debut_traitm = date_creation</span>
+<span class="sd">        self.fin_traitm = date_creation</span>
+<span class="sd">     </span>
+<span class="sd">règles d&#39;opération:</span>
+<span class="sd">    </span>
+<span class="sd">    1- gardien à l&#39;entrée accueille visiteur et insère son cas dans le système (le systeme cree 3 files) (il lui donne un billet numéroté)</span>
+<span class="sd">       ce gardien effectue un filtrage pour établir si le client est prioritaire ou alors s&#39;il a besoin de passer</span>
+<span class="sd">       à un guichet spécialisé (supposition: certains guichets ne traitent que des cas spécifiques) donc le cas est créé avec </span>
+<span class="sd">       type et prio + données chrono. il affiche le total et le type  des cas passés devant lui.</span>
+<span class="sd">       </span>
+<span class="sd">       ?DEQUE: envoyer les normaux à droite et les specs à gauche : S1,S2,Sx, NNNNNN -&gt; chrono</span>
+<span class="sd">       </span>
+<span class="sd">    2- TODO: générer un numéro de billet l&#39;affecter à cas. (spec1 = [A ou B ou C], spec2 = [D ou E ou F], normal = G à Z; tous suivis de 0 à 99)</span>
+<span class="sd">    </span>
+<span class="sd">    3- manager: lit les x files (app a un nombre dynamique de guichets et de spécialisations)</span>
+<span class="sd">    </span>
+<span class="sd">        manager trie une liste résultante (A) OU alors (B) les n listes restent telles quelles et les guichets doivent regarder les listes différents pour choisir leur cas</span>
+<span class="sd">        </span>
+<span class="sd">        A: une seule liste: cas Sx placés en tête de liste par ordre prio.sx.chrono. ensuite les cas normaux par ordre chrono.</span>
+<span class="sd">        </span>
+<span class="sd">        manager invoqué/notifié à chaque ajout de cas: il place le dernier cas entré. Raison de faire un thread ?</span>
+<span class="sd">    </span>
+<span class="sd">    4- guichet: le guichet a des caractéristiques dynamiques de traitement de cas: il a les propriétés Sx e/ou N, ce qui veut dire qu&#39;il peut piger dans l&#39;ordre :</span>
+<span class="sd">        Sx, Sx+1, finalement N. Donc, il doit lire la liste et popper le premier cas qu&#39;il peut exécuter (affiche le num sur gui).</span>
+<span class="sd">        Pour la demo: thread de traitement t = random(10 à 30 secs + next(g)).</span>
+<span class="sd">        </span>
+<span class="sd">        un guichet peut être fermé manuellement.</span>
+<span class="sd">        </span>
+<span class="sd">        un guichet peut changer de compétence (à l&#39;état fermé).</span>
+<span class="sd">               </span>
+<span class="sd">        </span>
+<span class="sd">        </span>
+<span class="sd">    5- chaque accès aux listes bloque cette liste (lock?).</span>
+
+<span class="sd">    6- le manager fait des stats de traitement par guichet.        </span>
+<span class="sd">        </span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Guichet</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../other.html">Mes classes</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, jk.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
